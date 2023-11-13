@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,6 @@ import { EvilIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NoteList from "../components/NoteList";
 import CategoryList from "../components/CategoryList";
-import CreateCategoryScreen from "./CreateCategory";
 import HomeStyle from "./HomeStyle";
 
 const HomeScreen = ({ navigation, route }) => {
@@ -21,14 +20,26 @@ const HomeScreen = ({ navigation, route }) => {
   const clearText = () => {
     setText("");
   };
-
-  const [, forceUpdate] = useForceUpdate();
   const [filteredNotes, setFilteredNotes] = useState([]);
   const [notes, setNotes] = useState([]);
+  const [activeCategory, setActiveCategory] = useState("All");
 
   useEffect(() => {
-    loadNotes();
-  }, []);
+    const loadNotes = async () => {
+      const storedNotes = await AsyncStorage.getItem("notes");
+      if (storedNotes) {
+        setNotes(JSON.parse(storedNotes));
+      }
+    };
+
+    const focusListener = navigation.addListener("focus", () => {
+      loadNotes();
+    });
+
+    return () => {
+      focusListener.remove();
+    };
+  }, [navigation]);
 
   useEffect(() => {
     if (text) {
@@ -41,6 +52,35 @@ const HomeScreen = ({ navigation, route }) => {
     }
   }, [text, notes]);
 
+  useEffect(() => {
+    if (newCategory && !categories.includes(newCategory)) {
+      addNewCategory(newCategory);
+    }
+  }, [newCategory]);
+
+  useEffect(() => {
+    if (route.params && route.params.editedNote) {
+      handleNoteEdit(route.params.editedNote);
+    }
+  }, [route.params]);
+
+  useEffect(() => {
+    const focusListener = navigation.addListener("focus", () => {
+      loadCategories();
+      loadNotes();
+    });
+
+    return () => {
+      focusListener.remove();
+    };
+  }, [navigation]);
+
+  useEffect(() => {
+    if (newCategory) {
+      addNewCategory(newCategory);
+    }
+  }, [newCategory]);
+
   const [categories, setCategories] = useState([
     "All",
     "Important",
@@ -49,42 +89,61 @@ const HomeScreen = ({ navigation, route }) => {
     "Shopping list",
   ]);
 
+  
   const { newCategory } = route.params || {};
 
-  const addNewCategory = (newCategory) => {
-    if (!categories.includes(newCategory)) {
-      const updatedCategories = [...categories, newCategory];
-      setCategories(updatedCategories);
-      setActiveCategory(newCategory);
-      AsyncStorage.setItem("categoryTitles", JSON.stringify(updatedCategories));
+  const addNewCategory = async (newCategory) => {
+    try {
+      if (!categories.includes(newCategory)) {
+        const updatedCategories = [...categories, newCategory];
+        setCategories(updatedCategories);
+        setActiveCategory(newCategory);
+        await AsyncStorage.setItem(
+          "categoryTitles",
+          JSON.stringify(updatedCategories)
+        );
+      }
+    } catch (error) {
+      console.error(error);
     }
   };
 
-  const navigateToCreateCategory = () => {
-    navigation.navigate("CreateCategory");
+  const loadNotes = async () => {
+    const storedCategories = await AsyncStorage.getItem("categoryTitles");
+    if (storedCategories) {
+      setCategories(JSON.parse(storedCategories));
+    }
+
+    const storedNotes = await AsyncStorage.getItem(activeCategory);
+    if (storedNotes) {
+      setNotes(JSON.parse(storedNotes));
+    }
   };
 
-  useEffect(() => {
-    if (newCategory && !categories.includes(newCategory)) {
-      addNewCategory(newCategory);
+  const loadCategories = async () => {
+    const storedCategories = await AsyncStorage.getItem("categoryTitles");
+    if (storedCategories) {
+      setCategories(JSON.parse(storedCategories));
     }
-  }, [newCategory]);
+  };
 
-  const [activeCategory, setActiveCategory] = useState("All");
+  const addNewNote = async (newNote) => {
+    try {
+      const storedNotes = await AsyncStorage.getItem("notes");
+      const existingNotes = storedNotes ? JSON.parse(storedNotes) : [];
+      const newNotes = [...existingNotes, newNote];
+      await AsyncStorage.setItem("notes", JSON.stringify(newNotes));
+      setNotes(newNotes);
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   const deleteNote = async (index) => {
     const newNotes = [...notes];
     newNotes.splice(index, 1);
     await AsyncStorage.setItem("notes", JSON.stringify(newNotes));
     setNotes(newNotes);
-    forceUpdate();
-  };
-
-  const loadNotes = async () => {
-    const storedNotes = await AsyncStorage.getItem("notes");
-    if (storedNotes) {
-      setNotes(JSON.parse(storedNotes));
-    }
   };
 
   const deleteNoteAlert = (index) => {
@@ -107,6 +166,10 @@ const HomeScreen = ({ navigation, route }) => {
 
   const editNote = (editedNote) => {
     navigation.navigate("CreateNote", { initialNote: editedNote });
+  };
+
+  const handleEdit = (note, index) => {
+    navigation.navigate("CreateNote", { initialNote: note, noteIndex: index });
   };
 
   return (
@@ -155,7 +218,7 @@ const HomeScreen = ({ navigation, route }) => {
             <NoteList
               renderItem={item}
               renderDeleteButton={() => deleteNoteAlert(index)}
-              onEdit={editNote}
+              onEdit={() => handleEdit(item, index)}
               colorIndex={index}
             />
           )}
@@ -191,8 +254,3 @@ const HomeScreen = ({ navigation, route }) => {
 };
 
 export default HomeScreen;
-
-function useForceUpdate() {
-  const [, setValue] = useState(0);
-  return [() => setValue((value) => ++value), {}];
-}

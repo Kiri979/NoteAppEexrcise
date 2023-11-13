@@ -3,17 +3,20 @@ import { Text, View, TextInput, TouchableOpacity } from "react-native";
 import CreateCategoryStyle from "./CreateCategoryStyle";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+
 const CreateCategoryScreen = ({ navigation }) => {
   const [categoryTitle, setCategoryTitle] = useState("");
-  const [categoryTitles, setCategoryTitles] = useState([]);
 
   const saveCategoryItem = async () => {
     if (categoryTitle.trim() !== "") {
-      await AsyncStorage.setItem("newCategory", categoryTitle);
+      const storedCategories = await AsyncStorage.getItem("categoryTitles");
+      const categories = storedCategories ? JSON.parse(storedCategories) : [];  
+      categories.push(categoryTitle);
+      await AsyncStorage.setItem("categoryTitles", JSON.stringify(categories));
       navigation.navigate("Home", { newCategory: categoryTitle });
     }
   };
-
+  
   return (
     <View style={CreateCategoryStyle.container}>
       <Text>Title</Text>

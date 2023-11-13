@@ -15,6 +15,45 @@ const CreateNoteScreen = ({ navigation, route }) => {
   const [note, setNote] = useState({ title: "", content: "" });
   const [notes, setNotes] = useState([]);
 
+  useEffect(() => {
+    if (route.params && route.params.initialNote) {
+      setNote({
+        title: route.params.initialNote.title,
+        content: route.params.initialNote.content,
+      });
+    }
+  }, [route.params]);
+
+  const saveNote = async () => {
+    try {
+      const storedNotes = await AsyncStorage.getItem("notes");
+      const existingNotes = storedNotes ? JSON.parse(storedNotes) : [];
+
+      const currentDate = new Date();
+      const formattedDate = currentDate.toLocaleDateString();
+      const formattedTime = currentDate.toLocaleTimeString();
+
+      const newNote = {
+        title: note.title,
+        content: note.content,
+        date: formattedDate,
+        time: formattedTime,
+      };
+
+      if (route.params && route.params.noteIndex !== undefined) {
+        existingNotes[route.params.noteIndex] = newNote;
+      } else {
+        existingNotes.push(newNote);
+      }
+      await AsyncStorage.setItem("notes", JSON.stringify(existingNotes));
+      setNotes(existingNotes);
+      setNote({ title: "", content: "" });
+      navigation.navigate("Home", { newNote: newNote });
+    } catch (error) {
+      console.error("Error saving note:", error);
+    }
+  };
+
   const [categories, setCategories] = useState([
     "All",
     "Important",
@@ -25,31 +64,12 @@ const CreateNoteScreen = ({ navigation, route }) => {
 
   const [activeCategory, setActiveCategory] = useState("All");
 
-  useEffect(() => {
-    if (route.params && route.params.initialNote) {
-      const { title, content, category } = route.params.initialNote;
-      setNote({
-        title: title || "",
-        content: content || "",
-        category: category || "All",
-      });
-      setActiveCategory(category || "All");
-    }
-  }, [route.params]);
+  const [newCategory, setNewCategory] = useState("");
 
-  const saveNote = async () => {
-    const newNotes = [...notes, note];
-    await AsyncStorage.setItem("notes", JSON.stringify(newNotes));
-    setNotes(newNotes);
-    setNote({ title: "", content: "" });
-  };
-
-  const addNewCategory = (newCategory) => {
-    if (!categories.includes(newCategory)) {
-      const updatedCategories = [...categories, newCategory];
-      setCategories(updatedCategories);
-      setActiveCategory(newCategory);
-      AsyncStorage.setItem("categoryTitles", JSON.stringify(updatedCategories));
+  const addNewCategoryFromNoteScreen = () => {
+    if (newCategory.trim() !== "") {
+      addNewCategory(newCategory);
+      setNewCategory("");
     }
   };
 

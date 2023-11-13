@@ -15,15 +15,18 @@ const NoteList = ({ renderItem, renderDeleteButton, colorIndex, onEdit }) => {
 
   const handleEdit = () => {
     onEdit(renderItem);
-    // editNote(renderItem);
   };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.column}>
         <View style={[styles.item, { backgroundColor: selectedColor }]}>
+          <View style={styles.dateTime}>
+            <Text style={styles.date}>{renderItem.date}</Text>
+            <Text style={styles.time}>{renderItem.time}</Text>
+          </View>
           <Text style={styles.titleContent}>{renderItem.title}</Text>
-          <Text>{renderItem.content}</Text>
+          <Text style={styles.paraTxt}>{renderItem.content}</Text>
           <View style={styles.icons}>
             <TouchableOpacity onPress={renderDeleteButton}>
               <AntDesign
@@ -33,7 +36,7 @@ const NoteList = ({ renderItem, renderDeleteButton, colorIndex, onEdit }) => {
                 color="black"
               />
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleEdit}>
+            <TouchableOpacity onPress={() => onEdit()}>
               <AntDesign name="edit" size={24} color="black" />
             </TouchableOpacity>
           </View>
@@ -59,10 +62,30 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     width: 150,
   },
-  titleContent: {
-    fontSize: 18,
+  dateTime: {
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  date: {
+    fontSize: 10,
     fontWeight: "bold",
-    paddingBottom: 10,
+    color: "#3d5af1",
+  },
+  time: {
+    fontSize: 10,
+    color: "#eac100",
+    fontWeight: "bold",
+  },
+  titleContent: {
+    fontSize: 16,
+    color: "#492540",
+    fontWeight: "bold",
+    fontStyle: "italic",
+    paddingBottom: 8,
+  },
+  paraTxt: {
+    fontSize: 14,
+    color: "#6e3b3b",
   },
   icons: {
     flexDirection: "row",
